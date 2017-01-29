@@ -1,0 +1,21 @@
+ sc.textFiles("name of file to load ")   : file does not load on this its lazily evaluated
+
+
+Transformation Commands
+map()
+flatmap()
+filter()
+
+
+
+Action commands
+
+take(no of coloumns to print)
+first()
+collect()
+count()
+
+spark-submit SparkSQLtwitter.py > suvirsql.txt
+
+## to submit spark command and copy output to file in the same directory
+

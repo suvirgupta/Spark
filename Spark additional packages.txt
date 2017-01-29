@@ -1,0 +1,172 @@
+
+
+################################Spark Additional Packages###############################################
+1. Spark SQL
+2. Spark Streaming
+3. MLib
+4. GraphX
+
+
+#####################################Spark SQL #######################################################3
+
+data set prezidential election tweets
+
+#######package name : twitter data in pycharm projects:############
+
+
+
+from pyspark import SparkContext, SQLContext, SparkConf
+
+import json
+
+conf = SparkConf().setMaster("yarn-client").setAppName("Twitterapp")
+
+sc = SparkContext(conf=conf)
+
+path = "cache-0.json"
+
+tweets = sc.textFile(path).map(lambda x: json.loads(x))
+
+tweets.filter(lambda x: x["user"]["screen_name"]=="realDonaldTrump").map(lambda x: x["text"]).take(10)
+
+
+Give first 10 tweets of donal trump:
+
+
+
+
+
+###################Implementing same using spark SQL ######################################
+
+
+import json
+from pyspark import SparkContext, SparkConf,SQLContext					##import SQLContext package
+conf= SparkConf().setMaster("yarn-client").setAppName("SQLtwitterdata")
+sc = SparkContext(conf=conf)
+sqlc = SQLContext(sc)
+path = "cache-0.json"
+twitterdata = sqlc.read.json(path)
+twitterdata.registerTempTable("twitterdata")
+sqlc.sql("select text, user.screen_name from twitterdata where user.screen_name = 'realDonaldTrump' limit(20)").collect()  #run sql command
+
+
+
+### Spark Mlib package#######################################
+
+
+Music recommendation program:
+
+It works on collaborative filtering, if two users have same opinion about a bunch of products. They are likely to have smae opinion about other products too.
+
+
+CF predict rating for product not yet tried. rating can be expilcitly asked or implicitly captured.
+
+Algoritm for CF : latent factor analysis (LFA)
+PCA is one of the method of LFA where best fit factor is generated correcponding to variables.
+
+first we get a user and genere table and rating of each user correcponding to genere is taken. there might be multiple missing values in matrix as some user may not rate the genre ..hence to predict the ration we use LFA or non negative matrix multiplication same as PCA but with non negative factors.
+
+## user- prod rating matrix(u) -> user-factor matrix(p) * product factor matrix(q)
+
+if we get p and q we can find u. there are multiple algoritms in spark to find that :
+
+ALS(Alternating Least Square) algorithm to get optimum p and Q.
+
+
+###Code:
+
+
+
+import os
+import sys
+os.environ['SPARK_HOME']="/usr/lib/spark"
+sys.path.append("/usr/lib/spark/python")
+from pyspark import SparkContext, SparkConf
+from collections import namedtuple
+from pyspark.mllib.recommendation import Rating, ALS
+conf= SparkConf().setMaster("local").setAppName("recommender")
+sc = SparkContext(conf=conf)
+datafiltered = sc.textFile(path).map(lambda x : x.split(" ")).filter(lambda x : x[2]>=20).map(lambda x: Rating(x[0],x[1],x[2])).persist()
+model = ALS.trainImplicit(datafiltered,10,5,0.01)
+recommendation = model.recommendProducts(user,5)
+
+
+
+
+########Spark Streaming#################
+
+
+Spark Streaming: Same system for batch processing and stream processing.
+
+lets say:
+
+Stream of logs in spark stream are represented as dstream logs.
+
+dstream: its the batch interval given to Spark Stream(SS), each batch interval is considered as one RDD.
+
+Its still batch processing but becomes real time if the batch interval is in seconds. no of logs that gets in the batch interval becomes content of the RDD.
+
+
+
+Dstream has two types of transformatiom:
+1.  Stateless  : map, reduceByKey
+2. stateful  : reduceByWindow, reduceByKeyAndWindow
+
+State full has sliding window which captures the group of batch interval RDDs and reduce them accordingly.
+consist of window size and the sliding interval. there is seperate transformation on RDDs that are in the window at given interval of time and one that are sliding out
+
+
+#######################Stateless code:##########################
+import os
+import sys
+os.environ['SPARK_HOME']="/usr/lib/spark"
+sys.path.append("/usr/lib/spark/python")
+from pyspark import SparkContext,SparkConf
+from pyspark.streaming import StreamingContext
+if __name__ == "__main__":
+    conf = SparkConf().setMaster("local").setAppName("sparkstreaming")
+    sc= SparkContext(appName="sparkstreaming",conf = conf)
+    ssc = StreamingContext(sc,1)
+    ssc.checkpoint("suvir")
+    streamdata = ssc.socketTextStream("localhost",9999)
+    counts = streamdata.flatMap(lambda x : x.split(" ")).filter(lambda x: "ERROR" in x).map(lambda x: (x,1))\
+        .reduceByKey(lambda x,y: x+y)
+    print counts.pprint(10)
+    ssc.start()
+    ssc.awaitTermination()
+
+##############StateFull code:  #######################
+
+
+
+# use reduceByKeyAndWindow instead of reduceByKey to accomodate window
+
+import os
+import sys
+os.environ['SPARK_HOME']="/usr/lib/spark"
+sys.path.append("/usr/lib/spark/python")
+from pyspark import SparkContext,SparkConf
+from pyspark.streaming import StreamingContext
+if __name__ == "__main__":
+    conf = SparkConf().setMaster("local").setAppName("sparkstreaming")
+    sc= SparkContext(appName="sparkstreaming",conf = conf)
+    ssc = StreamingContext(sc,1)
+    ssc.checkpoint("suvir")
+    streamdata = ssc.socketTextStream(sys.argv[1],sys.argv[2])
+    counts = streamdata.flatMap(lambda x : x.split(" ")).filter(lambda x: "ERROR" in x).map(lambda x: (x,1))\
+        .reduceByKeyAndWindow((lambda x,y:x+y),(lambda x,y:x-y),30,10)   ####reduceByKeyAndWindow sums the count of all keys in the current window, subtracts key values of moving out window , 30 sec of window side , 10 sec sliding interval
+    print counts.pprint(10)
+    ssc.start()
+    ssc.awaitTermination()
+
+
+
+
+
+
+
+
+
+
+
+

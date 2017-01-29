@@ -1,0 +1,105 @@
+
+
+There are two types of RDDs
+
+1 basic Rdd: Each element is a single pair
+2 Paired RDD: Each element is key and value pair
+
+Paired RDD is special Rdds where each record is treated as a Tuple with two vaue (key , value).
+
+Note: all basic Rdd transformation apply to Paired Rdd + it has some of its own transformations.
+
+Special operations on the paired RDDS:
+1) Keys(Return Rdd with keys)  2)value(Return RDD with values) 3) mapValues(works only on values in the map ) 4)groupByKey(groups key of similar type forming list of values)or Cogroup to work across Rdds 
+5)combineByKey( combines data with respect to key similar to aggregate only diff aggregate(Action)and combineByKey(Transformation)) 6)reduceByKey(Transformation)(same as reduce(Action operation) but on key basis)
+
+Joins: Join, Left Outer Join, Right outer join works same as in the sql matches the key and combine.
+
+Actions in Paired RDD:
+
+countByKey: Count the no of values per key
+Lookup: Returns all values for specific key 
+collectAsMap:Return all dictionary with all key value pairs
+
+#######################Average flight delay depending per airport(reduceByKey)################################
+
+delayedflights = flightsparse.map(lambda x : (x.origin, x.dep_delay))  ###### Select the airport and delay column
+#delayedflights.take(1)
+ 
+Sumdelaybyairport = delayedflights.reduceByKey(lambda x,y : x+y)   ##group delay of each flight by airline 
+#Sumdelaybyairport.take(1)
+
+flightsbyairport = delayedflights.mapValues
+
+flightsbyairport = delayedflights.mapValues(lambda x : 1).reduceByKey(lambda x,y : x+y)		### counts no of flights for an airport
+#flightsbyairport.take(1)  
+
+totalcount = Sumdelaybyairport.join(flightsbyairport)   # join flight delay time sum with count matching by key
+#output : [(u'JFK', (56469.0, 8070)), (u'GSP', (6729.0, 633))]
+
+averagecount = totalcount.mapValues(lambda x : x[0]/float(x[1]))
+#averagecount.take(5)
+#output:  [(u'JFK', 6.997397769516729), (u'GSP', 10.630331753554502), (u'FNT', 3.1932515337423313), (u'ROC', 7.841666666666667), (u'SIT', -1.5617977528089888)]
+
+################Average flight delay depending per airport(combineByKey)#################################
+
+sumcount2 = delayedflights.combineByKey((lambda value :(value,1)),(lambda acc, value: (acc[0]+value,acc[1]+1)),(lambda acc1,acc2:(acc1[0]+acc2[0],acc1[1]+acc2[1])))  
+
+#(lambda value :(value,1) : create combiner function initialise value once first key is shown in the partition.
+#(lambda acc, value: (acc[1],value)): merge function , specifies how values with same key be combined.
+# (lambda acc1[0],acc2[0]:(acc1[0]+acc2[0],acc1[1]+acc2[1]): merge combiner function
+
+# #######Top 10 flights delays(Sort by transformation)############
+averagecount.sortBy(lambda x: -x[1]).take(10) # use sortBy function to get top ten flight delays
+
+###################################Lookup of Data from other records###################################################################3
+###########remove header of the record and read file ############################################
+import csv
+
+from StringIO import StringIO
+
+def split(line):
+    
+    reader = csv.reader(StringIO(line))
+    
+    return reader.next()
+    
+    
+def notheader(row):
+    
+    return "Description" not in row
+
+airtports = sc.textFile("airports.csv").filter(notheader).map(split)
+    
+
+
+Three methods:
+1. Lookup Action
+2. map
+3. broadcast
+
+####Lookup action function use to find key description###################
+
+airports.lookup("keyname")
+
+###############collectAsMap(forms a key value pair of record and returns a python dictionary)##
+airportdesc = airports.collectAsMap()  #record converted to python disctionary
+
+lookupavg = averagecount.map(lambda x : (airportdesc[x[0]],x[1]))
+
+## NOte: lambda x : (airportdesc[x[0]],x[1]) is a closure function in which function carries a copy of data on each node to verify and transform an RDD. 
+# NOte: every time a map function is called airportdesc dictionary is coppied to each node hence waste of network resourses if multiple operations require this lookup.
+
+###########Use of Broadcast variables to tackle this issue using cache memory################
+# Broadcast variables are immutable i.e they cannot be changed after creation. 
+airportdescBC = sc.broadcast("airportdesc")   # broad cast variable created
+lookupavgBC = averagecount.map(lambda x: airportlookupBC[x[0],x[1])
+
+
+
+
+
+
+
+
+

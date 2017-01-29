@@ -1,0 +1,12 @@
+
+
+###################Spark error##########################
+
+ java.net.BindException: Address already in use
+java.net.BindException: Address already in use
+
+
+if multiple spark processes are running on single node we get this error.
+
+
+

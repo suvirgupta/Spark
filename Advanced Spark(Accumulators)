@@ -1,0 +1,105 @@
+
+
+################Accumulators####################################################
+
+# they are not immutable
+# individual nodes can only write to the accumulator.
+#The main program or spark shell can only read its value .
+# nodes on which accumulator is present can only increment the accumulator but cannot read it (enhanced features more then inc on accumulator is present using scala not python)
+
+########### reading the log file and printing the no of error messages in the log file############################
+## python package name : log.py######
+logs=sc.textFile(logsPath)  # file logpath has to be specified default directory is set to hdfs hdfs:///quickstart.cloudera:(port)/user/cloudera
+# machine by default takes file fro hdfs 
+
+Errcount = sc.accumulator(0)  # initialize accumulator variable and set in the local nodes
+
+def parselog(line):
+    
+    global Errcount  # set variables as global for count outside program
+    date = line[24:]
+    description = line[:24]
+    
+    if "ERROR" in line:
+        Errcount += 1
+        
+    return (date,description)
+
+logs.map(parselog).saveAsTextFile("suvir.txt")   # takes default path as hdfs:///quickstart.cloudera:(port)/user/cloudera/suvir.txt
+
+##################################Code for python package to use submit command#######################################################
+###below file saved as log.py##########################################################################################
+from pyspark import SparkContext,SparkConf
+conf = SparkConf().setMaster("yarn-client").setAppName("MyApp")
+sc = SparkContext(conf=conf)
+logpath= "access_log.txt"
+
+logfile=sc.textFile(logpath)
+Errcount = sc.accumulator(0)
+
+def parselog(line):
+    
+    global Errcount
+    date = line[17:46]
+    description = line[46:]
+    ip= line[:17]
+    
+    if "Guest" in line:
+        Errcount += 1
+        
+    return (date,description,ip)
+    
+logfile.map(parselog).saveAsTextFile("suvir.txt")
+
+print "count is" + str(Errcount)
+###################################################################################################################################################
+    
+#####################################################################################################################
+
+spark-submit log.py  # 
+
+
+#one can see application name set in the python package at resourse manager node:
+#Resourse Manager  :  http://quickstart.cloudera:8088/cluster
+
+
+########To remove unnecessary info messages in the console set log4j.properties termplate33333333
+##go spark installation directory : /usr/lib/spark/conf/log4j.properties.template
+#under
+# Set everything to be logged to the console
+log4j.rootCategory=INFO, console #(Set here INFO to WARN)
+log4j.rootCategory=WARN, console 
+
+
+
+#####################################Page Rank Algorithm ############################################################################################
+rank pages in google search based on no of refferences to one page
+
+googlelinks = sc.textFile('web-Google.txt').filter(lambda x: '#' not in x).map(lambda x : x.split('\t'))  # load google 2002 data with link node reference
+
+#googlelinkagrp = googlelinks.groupByKey().partitionBy(100)   # for hashing the table for fast response we us 'partitionBy' command, just befor join commands so that two RDDS in single node only one is shuffled rather then 2 shuffling
+#to save time.
+googlelinkagrp = googlelinks.groupByKey()		# no hashing done here hence more time is required to join tables with key in different nodes. hence more time for shuffle to get all values of same key in one node. since indexing
+# is not done both nodes are shuffled and hence more time reduired.
+linkrank = googlelinkagrp.mapValues(lambda x :1.0)
+#  or #
+
+#linkrank =googlelinkagrp.map(x: (x[0],1.0))
+
+
+
+ranklinkrdd = googlelinkagrp.join(linkrankgrp).cache()
+
+
+
+def computecontrib (urls, rank):
+    contribute = []
+    name_url = len(urls)
+    for url in urls:
+        contribute.append((url, rank/name_url))
+    return contribute
+
+
+for iteration in rank(10)
+	contrib1= ranklinkrdd1.map(lambda x : computecontrib(x[1][0],x[1][1]))
+	ranks = contrib.reduceByKey(lambda x,y: x+y).mapValues(lambda x : (x*0.85+0.15))

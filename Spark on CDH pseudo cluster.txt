@@ -1,0 +1,38 @@
+  open terminal and enter following commands
+Sudo yum install spark-core
+Sudo yum install spark-historyserver
+Sudo yum install spark-master
+Sudo yum install  spark-python
+
+use su command in linux to switch user from root to other user depending on privleges required for installation.
+su root
+
+spark installation file directory CDH 5
+command : echo $SPARK_HOME
+/usr/lib/spar or SPARK_HOME
+
+
+1. run spark shell with scala command:
+  spark-shell
+  Command: exit - to exit spark shell
+
+2. run spark shell with python
+   pyspark
+
+   pyspark --master local[2]  # run spark shell from master node with 2 threads or using two cores
+   pyspark -- master yarn-client # to run spark using yarn-client
+
+
+run and compile a scala code on spark using sbt(simple build tool)
+
+1. built.sbt file in the project directory
+2. move to project directory and run "package sbt " to complile the Scala code to jar file
+3. spark-submit --master "local[*]" --class in.goai.spark.SparkMeApp target/scala-2.11/first-spark_2.11-1.0.jar inputTextFile.txt
+  (./bin/spark-submit \
+  --class <main-class> \
+  --master <master-url> \
+  --deploy-mode <deploy-mode> \
+  --conf <key>=<value> \
+  ... # other options
+  <application-jar> \
+  [application-arguments])

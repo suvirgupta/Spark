@@ -1,0 +1,15 @@
+spark working 
+## initial set up
+1. driver program -> integrate to cluster manger(Yarn Sheduler) through Spark Context
+2. Yarn Sheduler -> run java process to get free executors
+3. Yarn Sheduler provides Executors to the driver program that are registered with driver program
+
+
+### Jobb Run
+
+4.  Jobs ->Stages->Tasks (DAGSheduler comes into play in driver program)
+5.  DAGSheduler breaks the jobs into small parts or units that are Directed Acyclic graphs.
+6. DAG means a standard way of representing a workflow with some independent task(parallel execution) and some dependent task(series execution) 
+7. once all task are divided and work flow set TaskSetManager assigns task to each executor.
+
+ 

@@ -1,0 +1,44 @@
+
+
+################Accumulators####################################################
+
+# they are not immutable
+# individual nodes can only write to the accumulator.
+#The main program or spark shell can only read its value .
+# nodes on which accumulator is present can only increment the accumulator but cannot read it (enhanced features more then inc on accumulator is present using scala not python)
+
+########### reading the log file and printing the no of error messages in the log file############################
+## python package name : log.py######
+logs=sc.textFile(logsPath)  # file logpath has to be specified default directory is set to hdfs hdfs:///quickstart.cloudera:(port)/user/cloudera
+# machine by default takes file fro hdfs 
+
+Errcount = sc.accumulator(0)  # initialize accumulator variable and set in the local nodes
+
+def parselog(line):
+    
+    global Errcount  # set variables as global for count outside program
+    date = line[24:]
+    description = line[:24]
+    
+    if "ERROR" in line:
+        Errcount += 1
+        
+    return (date,description)
+
+logs.map(parselog).saveAsTextFile("suvir.txt")   # takes default path as hdfs:///quickstart.cloudera:(port)/user/cloudera/suvir.txt
+    
+#####################################################################################################################
+
+spark-submit log.py  # 
+
+
+#one can see application name set in the python package at resourse manager node:
+#Resourse Manager  :  http://quickstart.cloudera:8088/cluster
+
+
+########To remove unnecessary info messages in the console set log4j.properties termplate#####
+##go spark installation directory : /usr/lib/spark/conf/log4j.properties.template
+#under
+# Set everything to be logged to the console
+log4j.rootCategory=INFO, console #(Set here INFO to WARN)
+log4j.rootCategory=WARN, console 

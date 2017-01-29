@@ -1,0 +1,131 @@
+ 
+
+airlines = sc.Textfile(airlines.csv)
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+AttributeError: 'SparkContext' object has no attribute 'Textfile'
+
+
+>>> airlines = sc.textFile(airlines.csv)
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+NameError: name 'airlines' is not defined
+>>> airlines = sc.textFile("airlines.csv")
+16/09/19 19:57:55 INFO storage.MemoryStore: Block broadcast_0 stored as values in memory (estimated size 183.4 KB, free 183.4 KB)
+16/09/19 19:57:55 INFO storage.MemoryStore: Block broadcast_0_piece0 stored as bytes in memory (estimated size 20.7 KB, free 204.1 KB)
+16/09/19 19:57:55 INFO storage.BlockManagerInfo: Added broadcast_0_piece0 in memory on 192.168.65.129:41100 (size: 20.7 KB, free: 534.5 MB)
+16/09/19 19:57:55 INFO spark.SparkContext: Created broadcast 0 from textFile at NativeMethodAccessorImpl.java:-2
+
+>>> airlines.first(10)
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+TypeError: first() takes exactly 1 argument (2 given)
+>>> airlines.take(10)
+
+[u'Code,Description', u'"19031","Mackey International Inc.: MAC"', u'"19032","Munz Northern Airlines Inc.: XY"', u'"19033","Cochise Airlines Inc.: COC"', u'"19034","Golden Gate Airlines Inc.: GSA"', u'"19035","Aeromech Inc.: RZZ"', u'"19036","Golden West Airlines Co.: GLW"', u'"19037","Puerto Rico Intl Airlines: PRN"', u'"19038","Air America Inc.: STZ"', u'"19039","Swift Aire Lines Inc.: SWT"']
+>>> airlines.filter(lambda x : 'Description' not in x)
+PythonRDD[3] at RDD at PythonRDD.scala:43
+
+>>> airlines.take(10)
+16
+[u'Code,Description', u'"19031","Mackey International Inc.: MAC"', u'"19032","Munz Northern Airlines Inc.: XY"', u'"19033","Cochise Airlines Inc.: COC"', u'"19034","Golden Gate Airlines Inc.: GSA"', u'"19035","Aeromech Inc.: RZZ"', u'"19036","Golden West Airlines Co.: GLW"', u'"19037","Puerto Rico Intl Airlines: PRN"', u'"19038","Air America Inc.: STZ"', u'"19039","Swift Aire Lines Inc.: SWT"']
+>
+>>> airlines.first()
+1
+u'Code,Description'
+>>> airlines.filter(lambda x : 'Description' not in x)
+PythonRDD[6] at RDD at PythonRDD.scala:43
+>>> airlinesdata=airlines.filter(lambda x : 'Description' not in x)
+>>> airlinesdata.take(10)
+1
+[u'"19031","Mackey International Inc.: MAC"', u'"19032","Munz Northern Airlines Inc.: XY"', u'"19033","Cochise Airlines Inc.: COC"', u'"19034","Golden Gate Airlines Inc.: GSA"', u'"19035","Aeromech Inc.: RZZ"', u'"19036","Golden West Airlines Co.: GLW"', u'"19037","Puerto Rico Intl Airlines: PRN"', u'"19038","Air America Inc.: STZ"', u'"19039","Swift Aire Lines Inc.: SWT"', u'"19040","American Central Airlines: TSF"']
+>>> airlinesdata.count()
+16
+1579
+>>> airlinesdata.map(lambda x: x.split(','))
+PythonRDD[9] at RDD at PythonRDD.scala:43
+>>> airlinesRDD=airlinesdata.map(lambda x: x.split(','))
+>>> airlinesRDD.take(10)
+1
+[[u'"19031"', u'"Mackey International Inc.: MAC"'], [u'"19032"', u'"Munz Northern Airlines Inc.: XY"'], [u'"19033"', u'"Cochise Airlines Inc.: COC"'], [u'"19034"', u'"Golden Gate Airlines Inc.: GSA"'], [u'"19035"', u'"Aeromech Inc.: RZZ"'], [u'"19036"', u'"Golden West Airlines Co.: GLW"'], [u'"19037"', u'"Puerto Rico Intl Airlines: PRN"'], [u'"19038"', u'"Air America Inc.: STZ"'], [u'"19039"', u'"Swift Aire Lines Inc.: SWT"'], [u'"19040"', u'"American Central Airlines: TSF"']]
+>
+
+
+####################################################################################################################################################
+
+
+
+
+*************************************************************************************************************************************
+parse function Spark( data loaded from file to RDD is in string with 'u' in front of data. data has to be parsed to respective type )
+**************************************************************************************************************************************
+
+from datetime import datetime
+#from datetime import date
+from collections import namedtuple
+
+
+
+# flights = sc.textFile('/home/cloudera/Documents/flights.csv')
+
+fields = ('date','airlines','flightnum','origin','dest','dep','dep_delay','arv','arv_delay','airtime','distance')
+
+
+Flights = namedtuple('Flights',fields,  verbose=True)  # name tuple is a factory function that manufactures a class without user need to define one
+
+DATE_FMT = "%Y-%m-%d"
+TIME_FMT = "%H%M"
+
+def parse(row):
+    
+    row[0]= datetime.strptime(row[0],DATE_FMT).date()
+    row[5]= datetime.strptime(row[5],TIME_FMT).time()
+    row[6]= float(row[6])
+    row[7]= datetime.strptime(row[7],TIME_FMT).time()
+    row[8] = float(row[8])
+    row[9]=float(row[9])
+    row[10]=float(row[10])
+    return Flights(*row[:11])
+
+
+
+##command in spark:
+
+flightsparse = flight.map(lambda x : x.slpit(',').map(parse))   # map(parse)-> closure function
+
+
+****************************************
+Total distance travelled by all flights and the average distance
+****************************************
+
+total_distance = flightsparse.map(lambda x: x.distance).reduce(lambda x,y: x+y)
+
+averagedistance = total_distance/flightparse1.count()
+
+
+#####percentage flights delay#####
+
+
+flightsparse.persist()   # persist() function for caching the RDD in the memory till the time all operations are performed ....this is to optimise time rather than calling 'flightsparse' RDD every time an operation is performed
+## unpersist() can be used to remove cached RDD from memory.
+flightsdelay_per = flightsparse.filter(lambda x: x.dep_delay >0).count()/flightsparse.count()
+
+
+###### Aggregate function in place for Reduce function in spark##############
+
+# Aggregate function can be used in place for 'reduce' function to aggregate the of all the RDD data.
+# 'aggregate' provides more flexibility as we can define sum operation in node and also among nodes
+
+sumcount = flightsparse.map(lambda x : x.dep_delay>0).aggregate((0,0),(lambda acc,value : (acc[0]+ value, acc[1]+1)),(lambda acc1,acc2 : (acc1[0] +acc2[0], acc1[1]+acc2[1])))
+
+# 'aggregate ' has three arguements : 1) initial value taken ass 0,0. 2) for aggregating the value in the node  "(lambda acc,value : (acc[0]+ value##value sum##, acc[1]+1)###count of the values)".  3) sum of values for aggregated sum between nodes#
+
+#########CountByValue() action use##################
+frequency_distribution = flightsparse1.map(lambda x: int(x.dep_delay/60)).countByValue()
+
+## output : {0: 452963, 1: 16016, 2: 4893, 3: 1729, 4: 701, 5: 249, 6: 113, 7: 66, 8: 43, 9: 26, 10: 15, 11: 12, 12: 9, 13: 15, 14: 13, 15: 4, 17: 2, 20: 4, 21: 3, 24: 3, 25: 1, 28: 1}
+
+
+
+
+
